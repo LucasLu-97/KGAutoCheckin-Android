@@ -23,3 +23,7 @@ local.properties
 *.aab
 *.keystore
 *.jks
+
+# 构建临时脚本与日志
+build-*.ps1
+build-*.log
