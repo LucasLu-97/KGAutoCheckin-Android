@@ -10,10 +10,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -25,7 +21,6 @@ import javax.crypto.spec.GCMParameterSpec
  * 账号持久化存储：
  * - 账号列表 JSON 经 AndroidKeyStore AES-256-GCM 加密后写入应用私有目录
  * - 进程内以 StateFlow 暴露，全部账号读写走此单点
- * - 首次加载时自动迁移旧版（壳架构 v1.0.x）账号数据，升级不丢账号
  */
 class AccountStore(context: Context) {
 
@@ -91,52 +86,7 @@ class AccountStore(context: Context) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, masterKey(), GCMParameterSpec(TAG_BITS, iv))
         val plain = cipher.doFinal(cipherBytes)
-        val text = String(plain, Charsets.UTF_8)
-        // 先按当前格式解析；失败则尝试从旧版（壳架构）格式迁移
-        return runCatching { json.decodeFromString(serializer, text) }.getOrElse {
-            migrateFromLegacy(text).also { migrated ->
-                if (migrated.isNotEmpty()) writeToFile(migrated)
-            }
-        }
-    }
-
-    /**
-     * 旧版（壳架构 v1.0.x）账号结构迁移：
-     * [{id, credentialsJson, displayJson, scriptName}] → Account(userid/token/dfid/nickname/pic)
-     * - credentialsJson：含 id/token/dfid
-     * - displayJson：含 nickname/avatarUrl
-     * 展示类字段（VIP 明细、乐龄等）在下次刷新账号时自动补齐。
-     */
-    private fun migrateFromLegacy(text: String): List<Account> {
-        return runCatching {
-            val arr = json.parseToJsonElement(text).jsonArray
-            arr.mapNotNull { el ->
-                val obj = runCatching { el.jsonObject }.getOrNull() ?: return@mapNotNull null
-                val credJson = obj["credentialsJson"]?.jsonPrimitive?.contentOrNull
-                    ?: return@mapNotNull null
-                val cred = runCatching { json.parseToJsonElement(credJson).jsonObject }.getOrNull()
-                    ?: return@mapNotNull null
-                val userid = cred["id"]?.jsonPrimitive?.contentOrNull
-                    ?: cred["userid"]?.jsonPrimitive?.contentOrNull
-                    ?: obj["id"]?.jsonPrimitive?.contentOrNull
-                    ?: return@mapNotNull null
-                val disp = obj["displayJson"]?.jsonPrimitive?.contentOrNull?.let {
-                    runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull()
-                }
-                val avatar = disp?.get("avatarUrl")?.jsonPrimitive?.contentOrNull ?: ""
-                Account(
-                    userid = userid,
-                    token = cred["token"]?.jsonPrimitive?.contentOrNull ?: "",
-                    dfid = cred["dfid"]?.jsonPrimitive?.contentOrNull ?: "",
-                    nickname = disp?.get("nickname")?.jsonPrimitive?.contentOrNull ?: "",
-                    pic = if (avatar.startsWith("http://")) {
-                        "https://" + avatar.removePrefix("http://")
-                    } else {
-                        avatar
-                    },
-                )
-            }
-        }.getOrDefault(emptyList())
+        return json.decodeFromString(serializer, String(plain, Charsets.UTF_8))
     }
 
     private fun writeToFile(accounts: List<Account>) {

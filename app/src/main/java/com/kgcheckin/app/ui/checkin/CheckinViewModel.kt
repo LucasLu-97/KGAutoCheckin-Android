@@ -71,6 +71,13 @@ class CheckinViewModel(app: Application) : AndroidViewModel(app) {
                 _logs.value = _logs.value + event
             }
         }
+        // 重置应用数据后清空内存中的日志视图（日志文件已由设置页删除）
+        viewModelScope.launch {
+            CheckinLogBus.clearSignals.collect {
+                _logs.value = emptyList()
+                _lastSummary.value = null
+            }
+        }
         // 清理过期日志文件（保留30天）
         viewModelScope.launch { container.logArchive.cleanup() }
     }

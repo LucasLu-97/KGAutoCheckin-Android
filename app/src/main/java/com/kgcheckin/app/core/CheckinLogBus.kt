@@ -17,7 +17,17 @@ object CheckinLogBus {
 
     val events: SharedFlow<LogEvent> = _events.asSharedFlow()
 
+    /** 清空信号：重置应用数据后通知日志展示方清掉内存中的旧日志 */
+    private val _clearSignals = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    val clearSignals: SharedFlow<Unit> = _clearSignals.asSharedFlow()
+
     fun post(event: LogEvent) {
         _events.tryEmit(event)
+    }
+
+    /** 请求各界面清空当前展示的日志（重置应用数据时调用） */
+    fun requestClear() {
+        _clearSignals.tryEmit(Unit)
     }
 }

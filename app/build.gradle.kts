@@ -16,9 +16,9 @@ android {
         // 兼容 Android 8.0 ~ Android 17（API 35/36/37 目标平台均已适配：
         // edge-to-edge、预测性返回、16KB page size 对齐由纯 Kotlin 实现天然满足）
         targetSdk = 36
-        // 版本号回归 1.0.0（一体化架构重建版）；versionCode 保持单调递增以支持覆盖安装
-        versionCode = 3
-        versionName = "1.0.0"
+        // 1.0.1：修复定时触发时缺少 ACCESS_NETWORK_STATE 权限导致的闪退；重置数据同步清空日志视图
+        versionCode = 4
+        versionName = "1.0.1"
     }
 
     buildTypes {

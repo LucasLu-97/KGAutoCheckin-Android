@@ -173,14 +173,21 @@ class CheckinService : Service() {
         val cm = getSystemService(ConnectivityManager::class.java) ?: return true
         val deadline = System.currentTimeMillis() + NETWORK_WAIT_SECONDS * 1000L
         while (System.currentTimeMillis() < deadline) {
-            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-            if (caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return true
+            if (isNetworkValidated(cm)) return true
             updateProgress("等待网络连接...")
             delay(2000)
         }
-        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-        return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return isNetworkValidated(cm)
     }
+
+    /**
+     * 网络可用性判断。任何异常（权限缺失、系统服务异常等）都视为“可用”，
+     * 绝不因网络状态查询本身阻断签到或导致崩溃。
+     */
+    private fun isNetworkValidated(cm: ConnectivityManager): Boolean = runCatching {
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+        caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }.getOrDefault(true)
 
     /** 日志三路分发：通知栏（节流） + 持久化存档 + APP内实时总线 */
     private fun postLog(event: LogEvent) {

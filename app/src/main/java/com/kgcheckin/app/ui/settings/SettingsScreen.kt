@@ -266,7 +266,7 @@ fun SettingsScreen(modifier: Modifier = Modifier, vm: SettingsViewModel = viewMo
                             if (done) {
                                 Text("已重置\n账号已保留，其余全部清空")
                             } else {
-                                Text("清除所有数据与脚本，仅保留账号登录\n确定继续？")
+                                Text("清除签到记录、日志与设置，仅保留账号登录\n确定继续？")
                             }
                         },
                         confirmButton = {

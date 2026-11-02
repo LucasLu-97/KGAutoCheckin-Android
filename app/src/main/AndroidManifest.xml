@@ -3,6 +3,8 @@
 
     <!-- 基础 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 网络状态查询（定时执行前的网络就绪等待需要，缺失会导致 ConnectivityManager 抛 SecurityException） -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 每日定时（方案A）：USE_EXACT_ALARM 定时类应用自动授予（Android 14+ 免手动授权），
          SCHEDULE_EXACT_ALARM 兜底（用户可在系统设置手动授予） -->

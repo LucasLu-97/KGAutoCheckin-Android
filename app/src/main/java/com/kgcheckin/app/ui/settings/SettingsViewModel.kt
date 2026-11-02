@@ -171,6 +171,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             container.logArchive.clearAll()
             container.settingsStore.clearAll()
             CheckinCoordinator.resetLastDuration()
+            // 通知签到页清空内存中已展示的日志（否则文件已删、界面仍显示旧内容）
+            com.kgcheckin.app.core.CheckinLogBus.requestClear()
             onDone()
         }
     }
