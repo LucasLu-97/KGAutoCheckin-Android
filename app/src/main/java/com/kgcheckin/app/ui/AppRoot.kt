@@ -58,7 +58,7 @@ private val tabs = listOf(
     Tab("更多设置", Icons.Filled.Settings, Icons.Outlined.Settings),
 )
 
-/** 应用根：主题（设置页实时切换）+ 紧凑底栏三页签（脚本管理已并入更多设置） */
+/** 应用根：主题（设置页实时切换）+ 紧凑底栏三页签 */
 @Composable
 fun AppRoot() {
     val container = (LocalContext.current.applicationContext as KgApplication).container
