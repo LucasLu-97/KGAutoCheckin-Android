@@ -38,12 +38,8 @@ interface CheckinRecordDao {
     fun queryMonth(userid: String, fromDay: Long, toDay: Long): Flow<List<CheckinRecord>>
 
     /** 该账号是否已有当天记录（用于重复签到时更新而非追加） */
-    /** 该账号是否已有当天记录（用于重复签到时更新而非追加） */
     @Query("SELECT * FROM checkin_records WHERE userid = :userid AND epochDay = :epochDay LIMIT 1")
     suspend fun findDay(userid: String, epochDay: Long): CheckinRecord?
-
-    @Query("DELETE FROM checkin_records WHERE userid = :userid AND epochDay = :epochDay")
-    suspend fun deleteDay(userid: String, epochDay: Long)
 
     /** 清理未来日期的脏数据（历史bug产生的误判记录） */
     @Query("DELETE FROM checkin_records WHERE epochDay > :todayEpochDay")

@@ -26,35 +26,16 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
-/** 扫码登录会话状态 */
-sealed interface QrLoginState {
-    data object Idle : QrLoginState
-    data object Loading : QrLoginState
-    /** 二维码已生成，等待用户扫描（约 2 分钟有效） */
-    data class Ready(val qrContent: String, val bitmap: Bitmap, val createdAt: Long) : QrLoginState
-    /** 用户已扫码，等待手机端确认 */
-    data object Scanned : QrLoginState
-    data object Expired : QrLoginState
-    /** 登录成功 */
-    data class Success(val account: Account) : QrLoginState
-    data class Error(val message: String) : QrLoginState
-}
-
-/** 解析出的 VIP 状态 */
-data class VipInfo(
-    val endTime: String,
-    val productType: String,
-    val remainDays: Int,
-)
-
 /**
  * 业务仓库：登录、签到、VIP 状态。
- * 签到流程完整移植自 kgcheckin2/main.js（听歌领取 → 8 次广告领取 → 查 VIP → 领一天畅听 VIP → 升级超级 VIP）。
+ * 签到流程：听歌领取 → 8 次广告领取 → 查 VIP → 领一天畅听 VIP → 升级超级 VIP。
  */
 class KgRepository(
     private val api: KgApi,
     private val store: AccountStore,
     private val recordDao: CheckinRecordDao,
+    /** 日志存档（可选）：调试信息落档供排查，如接口字段解析失败时的原始字段清单 */
+    private val logArchive: com.kgcheckin.app.core.LogArchive? = null,
 ) {
     val accounts get() = store.accounts
 
@@ -213,11 +194,6 @@ class KgRepository(
     private fun normalizeAvatarUrl(url: String): String =
         if (url.startsWith("http://")) "https://" + url.removePrefix("http://") else url
 
-    /** 仓库层调试日志存档注入（AppContainer 初始化时调用） */
-    fun attachLogArchive(archive: com.kgcheckin.app.core.LogArchive?) {
-        debugLogArchive = archive
-    }
-
     /** 刷新账号展示信息（昵称、头像、全部会员权益），并持久化 */
     suspend fun refreshAccountInfo(account: Account) {
         runCatching {
@@ -265,7 +241,7 @@ class KgRepository(
                     }
                 } ?: "无data"
                 val event = LogEvent.warn("[调试]用户信息字段(用于精调乐龄/听歌解析): $fields")
-                debugLogArchive?.append(event)
+                logArchive?.append(event)
                 com.kgcheckin.app.core.CheckinLogBus.post(event)
             }
         }
@@ -742,10 +718,6 @@ class KgRepository(
     }
 
     companion object {
-        /** 仓库层调试日志存档（由 AppContainer 初始化时注入） */
-        @Volatile internal var debugLogArchive: com.kgcheckin.app.core.LogArchive? = null
-        @Volatile private var instance: KgRepository? = null
-
         fun okHttp(): okhttp3.OkHttpClient = okhttp3.OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)

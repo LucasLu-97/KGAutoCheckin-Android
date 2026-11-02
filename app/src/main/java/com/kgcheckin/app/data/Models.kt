@@ -1,6 +1,28 @@
 package com.kgcheckin.app.data
 
+import android.graphics.Bitmap
 import kotlinx.serialization.Serializable
+
+/** 扫码登录会话状态 */
+sealed interface QrLoginState {
+    data object Idle : QrLoginState
+    data object Loading : QrLoginState
+    /** 二维码已生成，等待用户扫描（约 2 分钟有效） */
+    data class Ready(val qrContent: String, val bitmap: Bitmap, val createdAt: Long) : QrLoginState
+    /** 用户已扫码，等待手机端确认 */
+    data object Scanned : QrLoginState
+    data object Expired : QrLoginState
+    /** 登录成功 */
+    data class Success(val account: Account) : QrLoginState
+    data class Error(val message: String) : QrLoginState
+}
+
+/** 解析出的 VIP 状态 */
+data class VipInfo(
+    val endTime: String,
+    val productType: String,
+    val remainDays: Int,
+)
 
 /** 单项会员权益（busi_vip 中一个有效条目） */
 @Serializable

@@ -69,9 +69,6 @@ class LogArchive(context: Context) {
         }
     }
 
-    /** 调试辅助：当天文件是否存在 */
-    fun existsToday(): Boolean = fileFor(LocalDate.now()).exists()
-
     companion object {
         private const val MAX_KEEP_DAYS = 30L
     }
