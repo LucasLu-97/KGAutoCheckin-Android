@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 酷狗部分登录接口仅提供 http 明文端点（login.user.kugou.com）；
+     头像图床 http://imge.kugou.com 已在代码中优先升级 https，此处白名单作兜底。
+     其余一律走 https -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">login.user.kugou.com</domain>
+        <domain includeSubdomains="true">imge.kugou.com</domain>
+    </domain-config>
+</network-security-config>
