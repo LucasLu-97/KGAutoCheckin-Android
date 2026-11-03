@@ -58,7 +58,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,13 +70,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
-/** 截图2低饱和深灰蓝主色（仅作主题色未就绪时兼底色，正式色走 colorScheme） */
-private val SlateBlueFallback = Color(0xFF47586E)
-
 /** 内嵌模块容器色：夜间提高不透明度保证边界可见，日间保持柔和 */
 @Composable
 private fun moduleContainerColor(): Color {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     return MaterialTheme.colorScheme.surfaceVariant
 }
 
@@ -567,12 +562,4 @@ private fun StatsModule(signedCount: Int, monthDays: Int) {
             }
         }
     }
-}
-
-private fun remainText(days: Int): String = when {
-    days < 0 -> "已过期"
-    days == 0 -> "今日到期"
-    days < 30 -> "${days}天后到期"
-    days < 365 -> "${days / 30}个月后到期"
-    else -> "${days / 365}年后到期"
 }

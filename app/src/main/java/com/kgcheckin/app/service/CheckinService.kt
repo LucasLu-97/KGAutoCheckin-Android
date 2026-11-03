@@ -133,9 +133,9 @@ class CheckinService : Service() {
         container.accountStore.loadIfNeeded()
         val accounts = container.accountStore.accounts.first()
         if (accounts.isEmpty()) {
-            val event = LogEvent.warn("暂无已登录账号，跳过本次执行")
-            container.logArchive.append(event)
-            com.kgcheckin.app.core.CheckinLogBus.post(event)
+            // 与其余日志一致走 postLog 三路分发（存档 + 总线 + 通知栏节流更新），
+            // 正在看通知栏的用户也能直接看到本次跳过的原因
+            postLog(LogEvent.warn("暂无已登录账号，跳过本次执行"))
             return
         }
 

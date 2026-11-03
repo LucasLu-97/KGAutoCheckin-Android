@@ -33,7 +33,9 @@ class AccountStore(context: Context) {
     private val _accounts = MutableStateFlow<List<Account>>(emptyList())
     val accounts: StateFlow<List<Account>> = _accounts.asStateFlow()
 
-    private var loaded = false
+    // @Volatile：loadIfNeeded 的快速路径在锁外读取此标记，
+    // 确保其他线程/协程能立即看到加载完成后的写入（与 CheckinCoordinator 同风格）
+    @Volatile private var loaded = false
 
     /** 启动时加载（失败不崩溃，返回空列表） */
     suspend fun loadIfNeeded() {

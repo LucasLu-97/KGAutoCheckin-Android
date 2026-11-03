@@ -27,7 +27,8 @@ class BootReceiver : BroadcastReceiver() {
                     CheckinScheduler.schedule(app, settings.hour, settings.minute)
                 }
             } finally {
-                pendingResult.finish()
+                // goAsync 理论上非空，防御个别 ROM 下的边界场景，避免开机路径 NPE
+                pendingResult?.finish()
             }
         }
     }
