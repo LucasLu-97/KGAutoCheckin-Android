@@ -73,7 +73,7 @@ gradlew assembleRelease
 git tag v1.0.4 && git push origin v1.0.4
 ```
 
-流水线优先使用仓库 Secret `DEBUG_KEYSTORE_BASE64`（本机 `debug.keystore` 的 base64）签名，使 CI 产物与本地历史版本签名一致、App 内更新可直接覆盖安装；未配置该 Secret 时使用 CI 生成的 debug 签名（首次需卸载重装）。
+流水线优先使用仓库 Secret `DEBUG_KEYSTORE_BASE64`（固定签名密钥的 base64）签名：构建脚本通过 `KGAC_KEYSTORE_PATH` 环境变量显式引用密钥文件，并在构建后用 apksigner **自动校验产物签名证书指纹，不一致直接构建失败**，保证所有版本签名一致、App 内更新可直接覆盖安装；未配置该 Secret 时回退 CI 临时 debug 签名（版本间不可覆盖升级）。
 
 ## 隐私说明
 

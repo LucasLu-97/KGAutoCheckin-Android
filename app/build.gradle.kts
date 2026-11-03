@@ -23,17 +23,38 @@ android {
         //        误报“暂无已登录账号，跳过本次执行”且不执行签到；现在先等待账号加载完成
         // 1.0.5：架构审计加固（无功能变化）；CI 启用固定签名密钥，此后版本可覆盖安装升级
         // 1.0.6：定时触发跳过场景补静音留痕通知（当日已签过/暂无账号/避让手动执行），
-        //        被划掉后台时触发情况在通知栏可见
+        //        被划掉后台时触发情况在通知栏可见；CI 改为显式固定签名并自动校验
+        //        签名指纹（修复 v1.0.5/v1.0.6 首发产物实际使用临时签名的问题）
         versionCode = 9
         versionName = "1.0.6"
+    }
+
+    signingConfigs {
+        // CI 固定签名：仅当 workflow 注入 KGAC_KEYSTORE_PATH 环境变量时被 release
+        // 构建引用。显式指定密钥文件，不依赖 AGP 对 ~/.android/debug.keystore 的
+        // 隐式查找（曾在 CI 上因查找路径与恢复路径不一致而静默改用临时密钥，
+        // 导致各版本签名不同、无法覆盖升级）。
+        create("fixed") {
+            System.getenv("KGAC_KEYSTORE_PATH")?.let { path ->
+                storeFile = file(path)
+                storePassword = System.getenv("KGAC_KEYSTORE_STORE_PASS") ?: "android"
+                keyAlias = System.getenv("KGAC_KEYSTORE_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("KGAC_KEYSTORE_KEY_PASS") ?: "android"
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // 个人使用场景：以 debug 签名发布，产物可直接安装升级
-            signingConfig = signingConfigs.getByName("debug")
+            // 个人使用场景：本地构建保持 debug 签名（行为不变）；
+            // CI 注入固定密钥路径时改用固定签名，保证各版本签名一致、可覆盖升级
+            signingConfig = if (System.getenv("KGAC_KEYSTORE_PATH") != null) {
+                signingConfigs.getByName("fixed")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
