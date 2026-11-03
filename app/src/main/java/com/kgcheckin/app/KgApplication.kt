@@ -30,7 +30,9 @@ class AppContainer(context: Context) {
     private val okHttp = KgRepository.okHttp()
     private val api = KgApi(okHttp)
     private val db = Room.databaseBuilder(appContext, CheckinDb::class.java, "kg_checkin.db")
-        .fallbackToDestructiveMigration()
+        // 弃用 API 迁移：无参版在 Room 内部即本重载传 true，行为逐字节等价（每日仅
+        // 一条记录/账号，历史数据可弃保重建：缺少迁移路径时清库重连，避免崩溃）
+        .fallbackToDestructiveMigration(true)
         .build()
 
     val recordDao = db.recordDao()
