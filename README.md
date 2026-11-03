@@ -19,6 +19,7 @@
 定时场景做了完整的健壮性处理：
 
 - **精确闹钟**：`USE_EXACT_ALARM` + `SCHEDULE_EXACT_ALARM` 双声明，Android 14+ 无需手动授权即可息屏准点触发
+- **冷启动账号就绪**：APP 被杀后闹钟冷启动进程时，先同步等待加密账号仓库加载完成再执行，杜绝“暂无已登录账号”的启动竞态
 - **网络就绪等待**：触发后等待网络恢复（最多 60 秒）再执行，避免 Wi-Fi 尚未重连导致请求全部失败
 - **当日幂等**：全部账号已签到时自动跳过，重复触发不会产生多余执行
 - **可靠的续排**：闹钟续排在进程级作用域完成，服务销毁不丢失次日调度
@@ -62,6 +63,16 @@ gradlew assembleRelease
 ```
 
 需要 JDK 17+ 与 Android SDK（platforms;android-36），产物在 `app/build/outputs/apk/release/`。
+
+## 自动发布
+
+推送 `v*` 形式的 tag（如 `v1.0.4`）即触发 GitHub Actions 自动构建 release APK 并发布到 [Releases](../../releases)：
+
+```bash
+git tag v1.0.4 && git push origin v1.0.4
+```
+
+流水线优先使用仓库 Secret `DEBUG_KEYSTORE_BASE64`（本机 `debug.keystore` 的 base64）签名，使 CI 产物与本地历史版本签名一致、App 内更新可直接覆盖安装；未配置该 Secret 时使用 CI 生成的 debug 签名（首次需卸载重装）。
 
 ## 隐私说明
 

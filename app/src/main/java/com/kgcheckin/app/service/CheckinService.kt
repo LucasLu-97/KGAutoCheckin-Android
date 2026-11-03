@@ -125,6 +125,12 @@ class CheckinService : Service() {
     /** 执行全部账号；过程日志三路分发（存档 + 总线 + 通知） */
     private suspend fun runAllAccounts() {
         val container = appContainer
+        // 关键修复：定时闹钟常在 APP 被杀后冷启动进程。AppContainer 启动时的
+        // 异步账号加载与本服务的执行存在竞态——accounts.first() 会立刻取到
+        // StateFlow 的初始空列表，导致“暂无已登录账号，跳过本次执行”。
+        // 这里先幂等地等待加密账号仓库加载完成（loadIfNeeded 内部双检锁，
+        // 进程已加载时立即返回，前台定期触发场景零额外开销）。
+        container.accountStore.loadIfNeeded()
         val accounts = container.accountStore.accounts.first()
         if (accounts.isEmpty()) {
             val event = LogEvent.warn("暂无已登录账号，跳过本次执行")

@@ -202,6 +202,9 @@ class CheckinViewModel(app: Application) : AndroidViewModel(app) {
         if (autoTried) return
         autoTried = true
         viewModelScope.launch {
+            // 进程冷启动（如系统后台拉活/自启动）时账号可能尚未从磁盘异步加载完成，
+            // 先幂等地等待加载，避免“打开即签”误判为无账号而静默跳过
+            container.accountStore.loadIfNeeded()
             val s = container.settingsStore.settings.first()
             if (!s.openToCheckin) return@launch
             val accounts = repo.accounts.first()

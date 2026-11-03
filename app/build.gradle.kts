@@ -19,8 +19,10 @@ android {
         // edge-to-edge、预测性返回、16KB page size 对齐由纯 Kotlin 实现天然满足）
         targetSdk = 36
         // 1.0.3：应用包名改为 com.kgautocheckin.app（更换应用身份，需卸载旧版重装并重新登录账号）
-        versionCode = 6
-        versionName = "1.0.3"
+        // 1.0.4：修复定时闹钟冷启动进程时账号异步加载竞态——杀掉 APP 后到点触发会
+        //        误报“暂无已登录账号，跳过本次执行”且不执行签到；现在先等待账号加载完成
+        versionCode = 7
+        versionName = "1.0.4"
     }
 
     buildTypes {
