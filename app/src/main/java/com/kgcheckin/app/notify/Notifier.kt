@@ -17,6 +17,7 @@ import com.kgcheckin.app.data.CheckinOutcome
 class Notifier(private val context: Context) {
 
     private val channelId = "checkin_result"
+    private val infoChannelId = "checkin_info"
 
     init {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -28,6 +29,19 @@ class Notifier(private val context: Context) {
             ).apply {
                 description = "签到领取完成后的结果提醒（成功或失败）"
                 enableLights(true)
+            },
+        )
+        // 定时触发但未实际执行时的静音提醒通道：不响铃不振动，仅在通知栏留痕，
+        // 让“被划掉后台”场景下的触发可见可查
+        manager.createNotificationChannel(
+            NotificationChannel(
+                infoChannelId,
+                "定时触发提醒",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = "定时触发但无需执行时的静音留痕提醒"
+                setSound(null, null)
+                enableVibration(false)
             },
         )
     }
@@ -80,7 +94,34 @@ class Notifier(private val context: Context) {
         NotificationManagerCompat.from(context).notify(NOTIFY_ID, notification)
     }
 
+    /**
+     * 定时触发但未实际执行（当日已签过 / 暂无账号 / 与APP内手动签到撞车）时的
+     * 静音留痕提醒：这类场景服务瞬时结束，前台服务通知存活不足1秒肉眼不可见，
+     * 补此通知让用户在通知栏即可确认“定时确实触发了”。同ID覆盖，重复投递只留最后一条。
+     */
+    fun notifySkipped(message: String) {
+        if (!granted()) return
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?: Intent(context, MainActivity::class.java)
+        val pending = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, infoChannelId)
+            .setSmallIcon(R.drawable.ic_stat_checkin)
+            .setContentTitle("KG定时签到")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setSilent(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(NOTIFY_INFO_ID, notification)
+    }
+
     companion object {
         private const val NOTIFY_ID = 1001
+        private const val NOTIFY_INFO_ID = 1003
     }
 }

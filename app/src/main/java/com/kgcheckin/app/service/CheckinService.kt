@@ -78,6 +78,7 @@ class CheckinService : Service() {
                     job?.isActive == true -> Unit
                     !CheckinCoordinator.tryAcquire() -> {
                         updateProgress("检测到APP内正在签到，定时服务退出")
+                        appContainer.notifier.notifySkipped("APP 内正在手动签到，本次定时触发自动避让")
                         scheduleNext()
                         finishRun()
                     }
@@ -136,6 +137,8 @@ class CheckinService : Service() {
             // 与其余日志一致走 postLog 三路分发（存档 + 总线 + 通知栏节流更新），
             // 正在看通知栏的用户也能直接看到本次跳过的原因
             postLog(LogEvent.warn("暂无已登录账号，跳过本次执行"))
+            // 跳过路径瞬时结束，前台服务通知存活不足1秒不可见；补静音留痕通知
+            container.notifier.notifySkipped("暂无已登录账号，本次定时触发已跳过")
             return
         }
 
@@ -148,6 +151,7 @@ class CheckinService : Service() {
         }
         if (allDoneToday) {
             postLog(LogEvent.info("今日各账号均已签到成功，跳过本次定时执行"))
+            container.notifier.notifySkipped("今日已全部签到成功，本次定时触发自动跳过")
             return
         }
 
