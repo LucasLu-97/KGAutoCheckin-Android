@@ -35,7 +35,10 @@ jobs:
       - name: Restore debug keystore (optional)
         env:
           KEYSTORE: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+          PROBE: ${{ secrets.PROBE_CHECK }}
         run: |
+          # 诊断输出：仅打印长度，不泄露内容
+          echo "probe_len=${#PROBE} keystore_len=${#KEYSTORE}"
           if [ -n "$KEYSTORE" ]; then
             mkdir -p "$HOME/.android"
             rm -f "$HOME/.android/debug.keystore"
@@ -48,7 +51,7 @@ jobs:
       - name: Build release APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --info --stacktrace
 
       - name: Rename APK (KGAC_vX.Y.Z.apk)
         run: |
