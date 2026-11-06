@@ -42,7 +42,7 @@ android {
                 storeFile = file(path)
                 storePassword = System.getenv("KGAC_KEYSTORE_STORE_PASS")
                     ?: throw GradleException(
-                        "KGAC_KEYSTORE_STORE_PASS 未注入：CI 需配置 Actions Secret KEYSTORE_PASSWORD"
+                        "KGAC_KEYSTORE_STORE_PASS 未注入：CI 需配置 Actions Secret KGAC_KEYSTORE_PASS"
                     )
                 keyAlias = System.getenv("KGAC_KEYSTORE_ALIAS") ?: "androiddebugkey"
                 keyPassword = System.getenv("KGAC_KEYSTORE_KEY_PASS") ?: storePassword
