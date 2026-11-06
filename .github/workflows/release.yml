@@ -31,18 +31,18 @@ jobs:
       # （固定密钥的 base64）签名；构建脚本通过 KGAC_KEYSTORE_PATH 环境变量
       # 显式引用，不再写入/依赖 ~/.android/debug.keystore 的隐式查找路径。
       # 构建后自动校验产物签名指纹，不一致直接失败，杜绝签名漂移的版本流出。
-      # 安全加固（2026-11-06）：密钥库密码由 Actions Secret KEYSTORE_PASSWORD
+      # 安全加固（2026-11-06）：密钥库密码由 Actions Secret KGAC_KEYSTORE_PASS
       # 注入；若已配置密钥库但缺少密码 Secret，则直接失败（fail-fast），
       # 绝不静默回落默认密码。未配置密钥库 Secret 时回退 CI 临时 debug 签名。
       - name: Restore release keystore (optional)
         env:
           KEYSTORE: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PASS: ${{ secrets.KGAC_KEYSTORE_PASS }}
         run: |
           echo "env: ANDROID_HOME=$ANDROID_HOME ANDROID_SDK_HOME=${ANDROID_SDK_HOME:-unset} ANDROID_USER_HOME=${ANDROID_USER_HOME:-unset}"
           if [ -n "$KEYSTORE" ]; then
             if [ -z "$KEYSTORE_PASS" ]; then
-              echo "::error::DEBUG_KEYSTORE_BASE64 is set but KEYSTORE_PASSWORD secret is missing; refusing to build (no passwordless fallback)"
+              echo "::error::DEBUG_KEYSTORE_BASE64 is set but KGAC_KEYSTORE_PASS secret is missing; refusing to build (no passwordless fallback)"
               exit 1
             fi
             mkdir -p "$HOME/kgac-signing"
