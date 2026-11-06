@@ -35,12 +35,17 @@ android {
         // 构建引用。显式指定密钥文件，不依赖 AGP 对 ~/.android/debug.keystore 的
         // 隐式查找（曾在 CI 上因查找路径与恢复路径不一致而静默改用临时密钥，
         // 导致各版本签名不同、无法覆盖升级）。
+        // 安全加固（2026-11-06）：密码类变量一律由 CI Secret 注入，源码零明文回退；
+        // 缺失即构建失败（fail-fast），绝不静默回落默认值（与 Grocool 同款标准）。
         create("fixed") {
             System.getenv("KGAC_KEYSTORE_PATH")?.let { path ->
                 storeFile = file(path)
-                storePassword = System.getenv("KGAC_KEYSTORE_STORE_PASS") ?: "android"
+                storePassword = System.getenv("KGAC_KEYSTORE_STORE_PASS")
+                    ?: throw GradleException(
+                        "KGAC_KEYSTORE_STORE_PASS 未注入：CI 需配置 Actions Secret KEYSTORE_PASSWORD"
+                    )
                 keyAlias = System.getenv("KGAC_KEYSTORE_ALIAS") ?: "androiddebugkey"
-                keyPassword = System.getenv("KGAC_KEYSTORE_KEY_PASS") ?: "android"
+                keyPassword = System.getenv("KGAC_KEYSTORE_KEY_PASS") ?: storePassword
             }
         }
     }
