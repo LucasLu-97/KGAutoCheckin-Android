@@ -31,21 +31,23 @@ android {
     }
 
     signingConfigs {
-        // CI 固定签名：仅当 workflow 注入 KGAC_KEYSTORE_PATH 环境变量时被 release
-        // 构建引用。显式指定密钥文件，不依赖 AGP 对 ~/.android/debug.keystore 的
-        // 隐式查找（曾在 CI 上因查找路径与恢复路径不一致而静默改用临时密钥，
-        // 导致各版本签名不同、无法覆盖升级）。
-        // 安全加固（2026-11-06）：密码类变量一律由 CI Secret 注入，源码零明文回退；
-        // 缺失即构建失败（fail-fast），绝不静默回落默认值（与 Grocool 同款标准）。
+        // CI 固定签名：注入 KGAC_KEYSTORE_PATH 环境变量时被 release 构建引用，
+        // 显式指定密钥文件，不依赖 AGP 对 ~/.android/debug.keystore 的隐式查找
+        // （曾在 CI 上静默改用临时密钥导致各版本签名不同，详见交接文档坑 3）。
+        // fail-fast：密码类变量缺失时直接报错，绝不回落任何默认值（2026-11-06 安全审计整改，
+        // 与 Grocool 统一模式）。唯一例外 keyAlias：keystore 内条目名非机密，保留默认。
         create("fixed") {
             System.getenv("KGAC_KEYSTORE_PATH")?.let { path ->
                 storeFile = file(path)
-                storePassword = System.getenv("KGAC_KEYSTORE_STORE_PASS")
-                    ?: throw GradleException(
-                        "KGAC_KEYSTORE_STORE_PASS 未注入：CI 需配置 Actions Secret KGAC_KEYSTORE_PASS"
-                    )
+                val storePass = System.getenv("KGAC_KEYSTORE_STORE_PASS")
+                val keyPass = System.getenv("KGAC_KEYSTORE_KEY_PASS")
+                require(!storePass.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+                    "fixed signing enabled but KGAC_KEYSTORE_STORE_PASS / KGAC_KEYSTORE_KEY_PASS " +
+                        "not injected; fail-fast, refusing to fall back to a default password"
+                }
+                storePassword = storePass
                 keyAlias = System.getenv("KGAC_KEYSTORE_ALIAS") ?: "androiddebugkey"
-                keyPassword = System.getenv("KGAC_KEYSTORE_KEY_PASS") ?: storePassword
+                keyPassword = keyPass
             }
         }
     }
