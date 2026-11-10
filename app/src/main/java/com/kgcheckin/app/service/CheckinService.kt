@@ -233,19 +233,19 @@ class CheckinService : Service() {
     }
 
     /**
-     * 续排明天的闹钟：跑在进程级 applicationScope（不随 Service 销毁而取消），
+     * 续排下一次定时闹钟：跑在进程级 applicationScope（不随 Service 销毁而取消），
      * NonCancellable 保证续排必然完成。
      * 修复：原先在 stopSelf 后用 Service 自身 scope 续排，onDestroy 的 scope.cancel()
      * 与续排协程竞态，可能导致闹钟丢失、次日定时不触发。
+     * allowToday=false：本次触发已消耗当天窗口，只排"起始时刻在当前之后"的窗口
+     * （常规场景即明天；跨午夜执行完的场景则是当晚尚未开始的窗口）；
+     * 已抽定且未过期的时刻会按原值重排，跳过路径的多次触发不会反复重抽。
      */
     private fun scheduleNext() {
         appContainer.applicationScope.launch {
             withContext(NonCancellable) {
                 runCatching {
-                    val settings = appContainer.settingsStore.settings.first()
-                    if (settings.autoEnabled) {
-                        CheckinScheduler.schedule(this@CheckinService, settings.hour, settings.minute)
-                    }
+                    CheckinScheduler.ensureArmed(this@CheckinService, allowToday = false)
                 }
             }
         }

@@ -159,28 +159,29 @@ class CheckinViewModel(app: Application) : AndroidViewModel(app) {
 
     // ══════════════════════ 自动化设置（方案A）══════════════════════
 
-    /** 开关每日定时；开启即排布今天/明天的闹钟 */
+    /** 开关每日定时；开启即在窗口内抽定下一个随机时刻并排布闹钟 */
     fun setAutoEnabled(enabled: Boolean) {
         val app = getApplication<KgApplication>()
         viewModelScope.launch {
             container.settingsStore.setAutoEnabled(enabled)
             if (enabled) {
-                val s = container.settingsStore.settings.first()
-                CheckinScheduler.schedule(app, s.hour, s.minute)
+                CheckinScheduler.ensureArmed(app, allowToday = true)
             } else {
                 CheckinScheduler.cancel(app)
             }
         }
     }
 
-    /** 修改定时时刻；已开启则立即按新时刻重排 */
-    fun setAutoTime(hour: Int, minute: Int) {
+    /** 修改签到时间窗口；已开启则作废旧抽定时刻、按新窗口重抽 */
+    fun setAutoWindow(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         val app = getApplication<KgApplication>()
         viewModelScope.launch {
-            container.settingsStore.setTime(hour, minute)
+            container.settingsStore.setWindow(startHour, startMinute, endHour, endMinute)
+            // 无论开关状态都作废旧抽定时刻，避免旧窗口的残余时刻被误用
+            container.settingsStore.setNextPick(0L)
             val s = container.settingsStore.settings.first()
             if (s.autoEnabled) {
-                CheckinScheduler.schedule(app, s.hour, s.minute)
+                CheckinScheduler.ensureArmed(app, allowToday = true)
             }
         }
     }

@@ -76,7 +76,10 @@ private val ColorSuccess = Color(0xFF1A7F37)
 fun SettingsScreen(modifier: Modifier = Modifier, vm: SettingsViewModel = viewModel()) {
     val settings by vm.settings.collectAsState()
     val updateState by vm.updateState.collectAsState()
-    var showTimePicker by remember { mutableStateOf(false) }
+    var showWindowStartPicker by remember { mutableStateOf(false) }
+    var showWindowEndPicker by remember { mutableStateOf(false) }
+    var pendingStart by remember { mutableStateOf(0 to 0) }
+    var windowPickerError by remember { mutableStateOf<String?>(null) }
     var showGuide by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -181,7 +184,15 @@ fun SettingsScreen(modifier: Modifier = Modifier, vm: SettingsViewModel = viewMo
             SettingsCard {
                 SettingSwitchRow(
                     title = "每日定时自动签到",
-                    desc = if (settings.autoEnabled) "下次 " + nextRunText(settings.hour, settings.minute) else "到点后台静默签到全部账号",
+                    desc = if (settings.autoEnabled) {
+                        if (settings.nextPickEpochMillis > 0L) {
+                            "下次 " + nextPickText(settings.nextPickEpochMillis) + "（窗口内随机）"
+                        } else {
+                            "已开启，每天在窗口内随机执行"
+                        }
+                    } else {
+                        "每天在时间窗口内随机抽一个时刻，后台静默签到全部账号"
+                    },
                     checked = settings.autoEnabled,
                     onChange = { vm.setAutoEnabled(it) },
                 )
@@ -193,13 +204,18 @@ fun SettingsScreen(modifier: Modifier = Modifier, vm: SettingsViewModel = viewMo
                             .padding(horizontal = 14.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("执行时间", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text("签到时间窗口", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         TextButton(
-                            onClick = { showTimePicker = true },
+                            onClick = { showWindowStartPicker = true },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),
                         ) {
                             Text(
-                                "%02d:%02d".format(settings.hour, settings.minute),
+                                "%02d:%02d - %02d:%02d".format(
+                                    settings.windowStartHour,
+                                    settings.windowStartMinute,
+                                    settings.windowEndHour,
+                                    settings.windowEndMinute,
+                                ),
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleMedium,
                             )
@@ -304,15 +320,50 @@ fun SettingsScreen(modifier: Modifier = Modifier, vm: SettingsViewModel = viewMo
         }
     }
 
-    if (showTimePicker) {
+    // 窗口选择第一步：开始时间
+    if (showWindowStartPicker) {
         TimePickerDialog(
-            initialHour = settings.hour,
-            initialMinute = settings.minute,
+            title = "窗口开始时间",
+            initialHour = settings.windowStartHour,
+            initialMinute = settings.windowStartMinute,
             onConfirm = { h, m ->
-                vm.setAutoTime(h, m)
-                showTimePicker = false
+                pendingStart = h to m
+                windowPickerError = null
+                showWindowStartPicker = false
+                showWindowEndPicker = true
             },
-            onDismiss = { showTimePicker = false },
+            onDismiss = { showWindowStartPicker = false },
+        )
+    }
+
+    // 窗口选择第二步：结束时间（需晚于开始，暂不支持跨午夜）
+    if (showWindowEndPicker) {
+        val (startH, startM) = pendingStart
+        val currentEnd = settings.windowEndHour * 60 + settings.windowEndMinute
+        val initEnd = if (currentEnd > startH * 60 + startM) {
+            settings.windowEndHour to settings.windowEndMinute
+        } else {
+            val candidate = minOf(startH * 60 + startM + 60, 23 * 60 + 59)
+            candidate / 60 to candidate % 60
+        }
+        TimePickerDialog(
+            title = "窗口结束时间",
+            initialHour = initEnd.first,
+            initialMinute = initEnd.second,
+            supportingText = windowPickerError,
+            onConfirm = { h, m ->
+                if (h * 60 + m <= startH * 60 + startM) {
+                    windowPickerError = "结束时间需晚于开始时间（暂不支持跨午夜）"
+                } else {
+                    windowPickerError = null
+                    vm.setAutoWindow(startH, startM, h, m)
+                    showWindowEndPicker = false
+                }
+            },
+            onDismiss = {
+                showWindowEndPicker = false
+                windowPickerError = null
+            },
         )
     }
 
@@ -466,16 +517,17 @@ private fun openUrl(context: android.content.Context, url: String) {
     }
 }
 
-private fun nextRunText(hour: Int, minute: Int): String =
-    SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
-        .format(Date(CheckinScheduler.nextRun(hour, minute).timeInMillis))
+private fun nextPickText(pickEpochMillis: Long): String =
+    SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(pickEpochMillis))
 
-/** 时间选择弹窗 */
+/** 时间选择弹窗（标题可定制，支持底部错误提示文案） */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimePickerDialog(
+    title: String,
     initialHour: Int,
     initialMinute: Int,
+    supportingText: String? = null,
     onConfirm: (Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -486,8 +538,20 @@ private fun TimePickerDialog(
     )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("每日签到时间") },
-        text = { TimePicker(state = state) },
+        title = { Text(title) },
+        text = {
+            Column {
+                TimePicker(state = state)
+                if (supportingText != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        supportingText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
         confirmButton = {
             TextButton(onClick = { onConfirm(state.hour, state.minute) }) { Text("确定") }
         },
