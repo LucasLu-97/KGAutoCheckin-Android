@@ -38,7 +38,7 @@ ViewModel（MVVM）     StateFlow 驱动 UI 状态
 Repository            登录流程、签到流程、历史同步
 KgApi                 酷狗接口客户端（签名 / 加密 / 请求重试）
 本地存储              Room（签到记录）/ DataStore（设置）/ AndroidKeyStore（账号加密）
-调度                  AlarmManager 精确定时 + 前台服务（dataSync）
+调度                  AlarmManager 精确闹钟（时间窗口内每日随机）+ 前台服务（dataSync）
 ```
 
 | 层 | 技术 |
@@ -48,14 +48,14 @@ KgApi                 酷狗接口客户端（签名 / 加密 / 请求重试）
 | 架构 | MVVM（StateFlow）+ Repository |
 | 存储 | Room 2.7 / DataStore / AndroidKeyStore AES-256-GCM |
 | 网络 | OkHttp 4.12 |
-| 后台 | AlarmManager 精确闹钟 + 前台服务 |
+| 后台 | AlarmManager 精确闹钟（窗口内每日随机）+ 前台服务 |
 | 兼容 | Android 8.0 ~ 17（minSdk 26 / targetSdk 36） |
 
 ## 下载
 
 到 [Releases](../../releases) 页面下载 APK 安装，要求 Android 8.0 及以上。
 
-部分机型（MIUI 等）建议在系统设置中将本应用省电策略设为「无限制」并允许自启动，以保证息屏时准点执行。
+部分机型（MIUI 等）建议在系统设置中将本应用省电策略设为「无限制」并允许自启动，以保证息屏时按时自动执行。
 
 ## 构建
 
