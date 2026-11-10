@@ -67,13 +67,13 @@ gradlew assembleRelease
 
 ## 自动发布
 
-推送 `v*` 形式的 tag（如 `v1.0.4`）即触发 GitHub Actions 自动构建 release APK 并发布到 [Releases](../../releases)：
+推送 `v*` 形式的 tag（如 `v1.0.8`）即触发 GitHub Actions 自动构建 release APK 并发布到 [Releases](../../releases)：
 
 ```bash
-git tag v1.0.4 && git push origin v1.0.4
+git tag v1.0.8 && git push origin v1.0.8
 ```
 
-流水线优先使用仓库 Secret `DEBUG_KEYSTORE_BASE64`（固定签名密钥的 base64）签名：构建脚本通过 `KGAC_KEYSTORE_PATH` 环境变量显式引用密钥文件，并在构建后用 apksigner **自动校验产物签名证书指纹，不一致直接构建失败**，保证所有版本签名一致、App 内更新可直接覆盖安装；未配置该 Secret 时回退 CI 临时 debug 签名（版本间不可覆盖升级）。
+流水线签名需要两个仓库 Secret：`DEBUG_KEYSTORE_BASE64`（固定签名密钥的 base64）与 `KGAC_KEYSTORE_PASS`（密钥库密码，运行时经 Secret 注入，源码与日志零明文）。构建脚本通过 `KGAC_KEYSTORE_PATH` 环境变量显式引用密钥文件，并在构建后用 apksigner **自动校验产物签名证书指纹，不一致直接构建失败**，保证所有版本签名一致、App 内更新可直接覆盖安装。已配置密钥库但缺少密码 Secret 时**直接构建失败**（fail-fast，绝不静默回落默认密码）；完全未配置密钥库 Secret 时才回退 CI 临时 debug 签名（版本间不可覆盖升级）。
 
 ## 隐私说明
 
