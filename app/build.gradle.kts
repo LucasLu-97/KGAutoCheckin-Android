@@ -37,8 +37,8 @@ android {
         // CI 固定签名：注入 KGAC_KEYSTORE_PATH 环境变量时被 release 构建引用，
         // 显式指定密钥文件，不依赖 AGP 对 ~/.android/debug.keystore 的隐式查找
         // （曾在 CI 上静默改用临时密钥导致各版本签名不同，详见交接文档坑 3）。
-        // fail-fast：密码类变量缺失时直接报错，绝不回落任何默认值（2026-11-06 安全审计整改，
-        // 与 Grocool 统一模式）。唯一例外 keyAlias：keystore 内条目名非机密，保留默认。
+        // fail-fast：密码类变量缺失时直接报错，绝不回落任何默认值（2026-11-06 安全审计整改）。
+        // 唯一例外 keyAlias：keystore 内条目名非机密，保留默认。
         create("fixed") {
             System.getenv("KGAC_KEYSTORE_PATH")?.let { path ->
                 storeFile = file(path)
